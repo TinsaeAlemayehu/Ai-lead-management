@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "Lead": {
+      "title": "Lead",
+      "description": "Represents a potential customer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "source": { "type": "string" },
+        "status": { "type": "string", "enum": ["NEW", "CONTACTED", "QUALIFIED", "BOOKED", "LOST"] },
+        "score": { "type": "number" },
+        "scoreTier": { "type": "string", "enum": ["HOT", "WARM", "COLD"] },
+        "summary": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "phone", "status"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A single interaction in a conversation thread",
+      "type": "object",
+      "properties": {
+        "leadId": { "type": "string" },
+        "role": { "type": "string", "enum": ["assistant", "user", "system"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["leadId", "role", "content"]
+    }
+  },
+  "firestore": {
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Main lead records"
+    },
+    "/leads/{leadId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Conversation history for each lead"
+    },
+    "/settings/global": {
+      "schema": { "type": "object", "properties": { "qualificationCriteria": { "type": "string" } } },
+      "description": "Global AI behavior settings"
+    }
+  }
+}

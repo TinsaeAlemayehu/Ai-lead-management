@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (request.auth.token.email == 'goodtinsae@gmail.com' && request.auth.token.email_verified == true);
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Leads validation
+    function isValidLead(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100
+          && data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 20
+          && (data.email == null || (data.email is string && data.email.size() <= 100))
+          && data.status in ['NEW', 'CONTACTED', 'QUALIFIED', 'BOOKED', 'LOST']
+          && data.score is number && data.score >= 0 && data.score <= 100
+          && data.scoreTier in ['HOT', 'WARM', 'COLD'];
+    }
+
+    match /leads/{leadId} {
+      allow create: if isValidId(leadId) && isValidLead(incoming());
+      allow read: if isSignedIn(); // Simplified for MVP admin access
+      allow update: if isSignedIn() && isValidLead(incoming()) && (
+        // Identity protection: can't change ID or core owner fields in a real app
+        incoming().name == existing().name
+      );
+      allow delete: if isAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isValidId(messageId) && isSignedIn() 
+                      && incoming().role in ['assistant', 'user', 'system']
+                      && incoming().content is string && incoming().content.size() < 5000;
+      }
+    }
+
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
